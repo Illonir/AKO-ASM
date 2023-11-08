@@ -22,8 +22,8 @@ public _main
 
 	;znaki db 12 dup (?)
 	dekoder db '0123456789ABCDEF'
-	base_in dd 2d
-	base_out dd 16d
+	base_in dd 10d
+	base_out dd 10d
 
 .code
 
@@ -57,7 +57,7 @@ wyswietl_EAX_dec PROC
 
 	wyswietl:
 	mov byte PTR [edi] [0], 0AH ; kod nowego wiersza
-	mov byte PTR [edi] [11], 0 ; kod nowego wiersza
+	mov byte PTR [edi] [11], 0AH ; kod nowego wiersza
 	; wyświetlenie cyfr na ekranie
 	push dword PTR 12 ; liczba wyświetlanych znaków
 	push dword PTR edi ; adres wyśw. obszaru
@@ -248,10 +248,12 @@ wczytaj_do_EAX_hex ENDP
 
 wyswietl_EAX_Nary PROC
 	pusha
-	mov esi, 10 ; indeks w teoretycznej tablicy 'znaki' (obszarze stosu)
+	mov esi, 20 ; indeks w teoretycznej tablicy 'znaki' (obszarze stosu)
 	mov ebx, base_out ; dzielnik równy ebx
-	sub esp, 12 ; rezerwacja 12 (LF + 10 znaków + LF) bajtów na stosie
-	mov edi, esp
+	sub esp, 22 ; rezerwacja 22 (LF + 20 znaków + LF) bajtów na stosie
+	mov edi, esi ; ebp liczy gdzie kolejny przerywnik
+	mov ebp, esi
+	sub ebp, ecx
 
 	konwersja_N:
 	mov edx, 0 ; zerowanie starszej części dzielnej
@@ -268,8 +270,18 @@ wyswietl_EAX_Nary PROC
 	add dl, 37H ; zamiana reszty z dzielenia na kod
 				; ASCII
 
-
+	
 	wpisanie_N:
+	; odstępy co ecx znaków
+	cmp esi, ebp
+	jne dale
+	mov byte PTR [edi] [esi], '.' ; kod przerywnika
+	sub ebp, ecx
+	sub ebp, 1
+	dec esi
+	jmp wpisanie_N
+	dale:
+	; koniec odstępów
 	mov [edi] [esi], dl; zapisanie cyfry w kodzie ASCII
 	dec esi ; zmniejszenie indeksu
 	cmp eax, 0 ; sprawdzenie czy iloraz = 0
@@ -286,15 +298,15 @@ wyswietl_EAX_Nary PROC
 
 	wyswietl_N:
 	mov byte PTR [edi] [0], 0AH ; kod nowego wiersza
-	mov byte PTR [edi] [11], 0AH ; kod nowego wiersza
+	mov byte PTR [edi] [21], 0AH ; kod nowego wiersza
 	; wyświetlenie cyfr na ekranie
-	push dword PTR 12 ; liczba wyświetlanych znaków
+	push dword PTR 22 ; liczba wyświetlanych znaków
 	push dword PTR edi ; adres wyśw. obszaru
 	push dword PTR 1; numer urządzenia (ekran ma numer 1)
 	call __write ; wyświetlenie liczby na ekranie
 
 	add esp, 12 ; usunięcie parametrów ze stosu
-	add esp, 12 ; zwolnienie pamięci przechowującej tekstową postać liczby
+	add esp, 22 ; zwolnienie pamięci przechowującej tekstową postać liczby
 
 	popa
 	ret
@@ -477,15 +489,16 @@ _main PROC
 	;call wczytaj_do_EAX_hex
 	;call wyswietl_EAX_dec
 	;call wyswietl_EAX_Nary
+	mov ecx, 2
 
-	;whi:						; pętla while do testowania
-	;call wczytaj_do_EAX_N		; exit po wpisaniu 0
-	;cmp eax, 0
-	;je dont
-	;call wyswietl_EAX_dec
-	;call wyswietl_EAX_Nary
-	;jmp whi
-	;dont:
+	whi:						; pętla while do testowania
+	call wczytaj_do_EAX_N		; exit po wpisaniu 0
+	cmp eax, 0
+	je dont
+	call wyswietl_EAX_dec
+	call wyswietl_EAX_Nary
+	jmp whi
+	dont:
 
 	;call dziel					; dzielenie
 
