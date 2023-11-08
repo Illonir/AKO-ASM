@@ -367,6 +367,8 @@ wczytaj_do_EAX_N PROC
 	ret
 wczytaj_do_EAX_N ENDP
 
+; funkcja, która ma argumenty w kodzie, a nie jak człowiek na stosie / w rejestrach
+; tylko 1 argument - dword
 fun PROC
 	mov ebp, [esp]	; esp jest za ostatnia wartością ip - w miejscu w kodzie gdzie zaczynają się parametry
 	mov eax, [ebp]	; pod ebp pierwszy parametr - wpisujemy do eax
@@ -374,6 +376,55 @@ fun PROC
 	push ebp		; zapisujemy na stosie adres powrotu
 	ret				; powrót z fun
 fun ENDP
+
+dziel PROC
+	; dzielenie eax przez ebx i wyswietlenie wyniku jako liczby dziesietnej
+	; 3 miejsca po przecinku
+	; wynik dzielenia może być większy niż 10, więc wyświetlamy go z pomocą wyświetl_EAX_dec
+	;	lekko zmodyfikowanego - bez LF na końcu
+	; część ułamkową wyświetlamy ręcznie dzieląc 3 razy pisemnie
+	;	dzielimy, mnożymy resztę przez 10, wpisujemy do pamięci wynik i dzielimy ponownie
+	; część ułamkową wyświetlamy przez puts znak po znaku
+	mov ecx, 0
+	sub esp, 5
+	mov edi, esp
+	mov byte PTR [edi], ','
+	mov byte PTR [edi+4], 0Ah
+	mov eax, 211d
+	mov ebx, 22d
+	div bl
+	mov ch, ah
+	mov ah, 0
+	call wyswietl_EAX_dec
+	mov ah, ch
+	movzx ecx, ah
+	mov ax, cx
+	mul byte ptr dziesiec
+	div bl
+	add al, 30h
+	mov byte PTR [edi+1], al
+	movzx ecx, ah
+	mov ax, cx
+	mul byte ptr dziesiec
+	div bl
+	add al, 30h
+	mov byte PTR [edi+2], al
+	movzx ecx, ah
+	mov ax, cx
+	mul byte ptr dziesiec
+	div bl
+	add al, 30h
+	mov byte PTR [edi+3], al
+
+	push dword PTR 5
+	push dword PTR edi
+	push dword PTR 1
+	call __write
+
+	add esp, 12
+	add esp, 5
+	ret
+dziel ENDP
 
 ; wyswietl EAX_dec z pomocą _puts
 wyswietl_EAX_dec2 PROC
@@ -421,14 +472,14 @@ wyswietl_EAX_dec2 PROC
 wyswietl_EAX_dec2 ENDP
 
 _main PROC
-	;mov eax, 26d
+	;mov eax, 26d				; testowanie ogólne 
 	;call wyswietl_EAX_hex
 	;call wczytaj_do_EAX_hex
 	;call wyswietl_EAX_dec
 	;call wyswietl_EAX_Nary
 
-	;whi:
-	;call wczytaj_do_EAX_N
+	;whi:						; pętla while do testowania
+	;call wczytaj_do_EAX_N		; exit po wpisaniu 0
 	;cmp eax, 0
 	;je dont
 	;call wyswietl_EAX_dec
@@ -436,61 +487,11 @@ _main PROC
 	;jmp whi
 	;dont:
 
+	;call dziel					; dzielenie
 
-	; dzielenie eax przez ebx i wyswietlenie wyniku jako liczby dziesietnej
-	; 3 miejsca po przecinku
-	; wynik dzielenia może być większy niż 10, więc wyświetlamy go z pomocą wyświetl_EAX_dec
-	;	lekko zmodyfikowanego - bez LF na końcu
-	; część ułamkową wyświetlamy ręcznie dzieląc 3 razy pisemnie
-	;	dzielimy, mnożymy resztę przez 10, wpisujemy do pamięci wynik i dzielimy ponownie
-	; część ułamkową wyświetlamy przez puts znak po znaku
-	mov ecx, 0
-	sub esp, 4
-	mov edi, esp
-	mov byte PTR [edi], ','
-	mov byte PTR [edi+4], 0Ah
-	mov eax, 211d
-	mov ebx, 22d
-	div bl
-	mov ch, ah
-	mov ah, 0
-	call wyswietl_EAX_dec
-	mov ah, ch
-	movzx ecx, ah
-	mov ax, cx
-	mul byte ptr dziesiec
-	div bl
-	add al, 30h
-	mov byte PTR [edi+1], al
-	movzx ecx, ah
-	mov ax, cx
-	mul byte ptr dziesiec
-	div bl
-	add al, 30h
-	mov byte PTR [edi+2], al
-	movzx ecx, ah
-	mov ax, cx
-	mul byte ptr dziesiec
-	div bl
-	add al, 30h
-	mov byte PTR [edi+3], al
-
-	push dword PTR 5
-	push dword PTR edi
-	push dword PTR 1
-	call __write
-
-	;call wczytaj_do_EAX_dec
-	;call wyswietl_EAX_dec2
-
-	;call wyswietl_EAX_hex
-
-
-	;push 1
-	;mov eax, 0
-	;call fun
-	;dd 10h
-	;pop ecx
+	;call fun					; for fun()
+	;dd 10h						; tak nie dawać argumentów do funkcji
+								; ale jest
 	
 	push 0
 	call _ExitProcess@4
