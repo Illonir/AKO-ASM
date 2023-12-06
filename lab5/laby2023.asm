@@ -12,6 +12,39 @@ extern _malloc : PROC
 
 .code
 
+_exp PROC
+	; na start mamy w ST(0) wartość x
+
+	fldl2e				; log 2 e
+	fmulp st(1), st(0)  ; obliczenie x * log 2 e
+
+	; kopiowanie obliczonej wartości do ST(1)
+	fst st(1)
+
+	; zaokrąglenie do wartości całkowitej
+	frndint
+
+	fsub st(1), st(0)	; obliczenie części ułamkowej
+	fxch				; zamiana ST(0) i ST(1)
+
+	; po zamianie: ST(0) - część ułamkowa, ST(1) - część całkowita
+	; obliczenie wartości funkcji wykładniczej dla części
+	; ułamkowej wykładnika
+	f2xm1
+	fld1				; liczba 1
+	faddp st(1), st(0)  ; dodanie 1 do wyniku
+
+	; mnożenie przez 2^(część całkowita)
+	fscale
+	; przesłanie wyniku do ST(1) i usunięcie wartości
+	; z wierzchołka stosu
+
+	fstp st(1)
+	; w rezultacie wynik znajduje się w ST(0)
+
+	ret
+_exp ENDP
+
 _single_neuron PROC
 	push ebp
 	mov ebp, esp
@@ -179,5 +212,48 @@ ptl:
 	pop ebp
 	ret
 _uint48float ENDP
+
+
+_neuron2 PROC
+push ebp
+	mov ebp, esp
+
+	finit
+	fldz
+	mov ecx, 0					; iterator
+	mov eax, [ebp+8]			; wskaznik na tablice doubli
+	mov edx, [ebp+12]			; wskaznik na tablice wag (float)
+
+	suma_waz:
+	cmp ecx, [ebp+16]
+	jae suma_waz_end
+	fld qword ptr [eax+8*ecx]	; wczytanie xi
+	fld dword ptr [edx+4*ecx]	; wczytanie wi
+	fmulp						; xi*wi
+	faddp						; suma w st(0)
+	inc ecx
+	jmp suma_waz
+	suma_waz_end:
+
+	; niepotrzebne
+	;push dword ptr 4			; rezerwowanie pamieci na 1 floata wyniku
+	;call _malloc				; w eax jest wskaznik na zaalokowana pamiec
+	;add esp, 4
+
+	; funkcja aktywacji
+	call _exp
+	fld1
+	fadd st(0), st(1)
+	fdivp
+
+	; niepotrzebne
+	;koniec:
+	;fstp dword ptr [eax]		; zapisanie wyniku do pamieci
+	
+	pop ebp
+	ret
+_neuron2 ENDP
+
+
 
 END
